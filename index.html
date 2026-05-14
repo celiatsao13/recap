@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAM — Breadcrumbs Tablet Experience</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,500&family=Manrope:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: #e8e6e1;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Manrope', sans-serif;
+    overflow: hidden;
+  }
+
+  /* Tablet shell */
+  .tablet-shell {
+    width: 768px;
+    height: 1024px;
+    background: #111;
+    border-radius: 32px;
+    box-shadow: 0 32px 80px rgba(0,0,0,0.18), 0 8px 24px rgba(0,0,0,0.10);
+    position: relative;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  .tablet-screen {
+    position: absolute;
+    inset: 10px;
+    border-radius: 22px;
+    overflow: hidden;
+    background: #fff;
+  }
+
+  #root {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100vw;
+    height: 100vh;
+  }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const __TWEAKS_STYLE = `
+  .twk-panel{position:fixed;right:16px;bottom:16px;z-index:2147483646;width:280px;
+    max-height:calc(100vh - 32px);display:flex;flex-direction:column;
+    background:rgba(250,249,247,.78);color:#29261b;
+    -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%);
+    border:.5px solid rgba(255,255,255,.6);border-radius:14px;
+    box-shadow:0 1px 0 rgba(255,255,255,.5) inset,0 12px 40px rgba(0,0,0,.18);
+    font:11.5px/1.4 ui-sans-serif,system-ui,-apple-system,sans-serif;overflow:hidden}
+  .twk-hd{display:flex;align-items:center;justify-content:space-between;
+    padding:10px 8px 10px 14px;cursor:move;user-select:none}
+  .twk-hd b{font-size:12px;font-weight:600;letter-spacing:.01em}
+  .twk-x{appearance:none;border:0;background:transparent;color:rgba(41,38,27,.55);
+    width:22px;height:22px;border-radius:6px;cursor:default;font-size:13px;line-height:1}
+  .twk-x:hover{background:rgba(0,0,0,.06);color:#29261b}
+  .twk-body{padding:2px 14px 14px;display:flex;flex-direction:column;gap:10px;
+    overflow-y:auto;overflow-x:hidden;min-height:0;
+    scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.15) transparent}
+  .twk-row{display:flex;flex-direction:column;gap:5px}
+  .twk-row-h{flex-direction:row;align-items:center;justify-content:space-between;gap:10px}
+  .twk-lbl{display:flex;justify-content:space-between;align-items:baseline;color:rgba(41,38,27,.72)}
+  .twk-lbl>span:first-child{font-weight:500}
+  .twk-val{color:rgba(41,38,27,.5);font-variant-numeric:tabular-nums}
+  .twk-sect{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+    color:rgba(41,38,27,.45);padding:10px 0 0}
+  .twk-sect:first-child{padding-top:0}
+  .twk-field{appearance:none;width:100%;height:26px;padding:0 8px;
+    border:.5px solid rgba(0,0,0,.1);border-radius:7px;
+    background:rgba(255,255,255,.6);color:inherit;font:inherit;outline:none}
+  .twk-field:focus{border-color:rgba(0,0,0,.25);background:rgba(255,255,255,.85)}
+  select.twk-field{padding-right:22px;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path fill='rgba(0,0,0,.5)' d='M0 0h10L5 6z'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+  .twk-toggle{position:relative;width:32px;height:18px;border:0;border-radius:999px;
+    background:rgba(0,0,0,.15);transition:background .15s;cursor:default;padding:0}
+  .twk-toggle[data-on="1"]{background:#34c759}
+  .twk-toggle i{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s}
+  .twk-toggle[data-on="1"] i{transform:translateX(14px)}
+  .twk-seg{position:relative;display:flex;padding:2px;border-radius:8px;background:rgba(0,0,0,.06);user-select:none}
+  .twk-seg-thumb{position:absolute;top:2px;bottom:2px;border-radius:6px;
+    background:rgba(255,255,255,.9);box-shadow:0 1px 2px rgba(0,0,0,.12);
+    transition:left .15s cubic-bezier(.3,.7,.4,1),width .15s}
+  .twk-seg button{appearance:none;position:relative;z-index:1;flex:1;border:0;
+    background:transparent;color:inherit;font:inherit;font-weight:500;min-height:22px;
+    border-radius:6px;cursor:default;padding:4px 6px;line-height:1.2}
+`;
+
+function useTweaks(defaults) {
+  const [values, setValues] = React.useState(defaults);
+  const setTweak = React.useCallback((keyOrEdits, val) => {
+    const edits = typeof keyOrEdits === 'object' && keyOrEdits !== null
+      ? keyOrEdits : { [keyOrEdits]: val };
+    setValues((prev) => ({ ...prev, ...edits }));
+    window.parent.postMessage({ type: '__edit_mode_set_keys', edits }, '*');
+  }, []);
+  return [values, setTweak];
+}
+
+function TweaksPanel({ title = 'Tweaks', children }) {
+  const [open, setOpen] = React.useState(false);
+  const dragRef = React.useRef(null);
+  const offsetRef = React.useRef({ x: 16, y: 16 });
+  const PAD = 16;
+  const clampToViewport = React.useCallback(() => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const w = panel.offsetWidth, h = panel.offsetHeight;
+    offsetRef.current = {
+      x: Math.min(Math.max(PAD, window.innerWidth - w - PAD), Math.max(PAD, offsetRef.current.x)),
+      y: Math.min(Math.max(PAD, window.innerHeight - h - PAD), Math.max(PAD, offsetRef.current.y)),
+    };
+    panel.style.right = offsetRef.current.x + 'px';
+    panel.style.bottom = offsetRef.current.y + 'px';
+  }, []);
+  React.useEffect(() => {
+    const onMsg = (e) => {
+      const t = e?.data?.type;
+      if (t === '__activate_edit_mode') setOpen(true);
+      else if (t === '__deactivate_edit_mode') setOpen(false);
+    };
+    window.addEventListener('message', onMsg);
+    window.parent.postMessage({ type: '__edit_mode_available' }, '*');
+    return () => window.removeEventListener('message', onMsg);
+  }, []);
+  const dismiss = () => { setOpen(false); window.parent.postMessage({ type: '__edit_mode_dismissed' }, '*'); };
+  const onDragStart = (e) => {
+    const panel = dragRef.current;
+    if (!panel) return;
+    const r = panel.getBoundingClientRect();
+    const sx = e.clientX, sy = e.clientY;
+    const startRight = window.innerWidth - r.right;
+    const startBottom = window.innerHeight - r.bottom;
+    const move = (ev) => {
+      offsetRef.current = { x: startRight - (ev.clientX - sx), y: startBottom - (ev.clientY - sy) };
+      clampToViewport();
+    };
+    const up = () => { window.removeEventListener('mousemove', move); window.removeEventListener('mouseup', up); };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  };
+  if (!open) return null;
+  return (
+    <>
+      <style>{__TWEAKS_STYLE}</style>
+      <div ref={dragRef} className="twk-panel" style={{ right: offsetRef.current.x, bottom: offsetRef.current.y }}>
+        <div className="twk-hd" onMouseDown={onDragStart}>
+          <b>{title}</b>
+          <button className="twk-x" onMouseDown={e => e.stopPropagation()} onClick={dismiss}>✕</button>
+        </div>
+        <div className="twk-body">{children}</div>
+      </div>
+    </>
+  );
+}
+
+function TweakSection({ label }) { return <div className="twk-sect">{label}</div>; }
+
+function TweakRow({ label, children }) {
+  return (
+    <div className="twk-row">
+      <div className="twk-lbl"><span>{label}</span></div>
+      {children}
+    </div>
+  );
+}
+
+function TweakText({ label, value, placeholder, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <input className="twk-field" type="text" value={value} placeholder={placeholder}
+             onChange={e => onChange(e.target.value)} />
+    </TweakRow>
+  );
+}
+
+function TweakSelect({ label, value, options, onChange }) {
+  return (
+    <TweakRow label={label}>
+      <select className="twk-field" value={value} onChange={e => onChange(e.target.value)}>
+        {options.map(o => {
+          const v = typeof o === 'object' ? o.value : o;
+          const l = typeof o === 'object' ? o.label : o;
+          return <option key={v} value={v}>{l}</option>;
+        })}
+      </select>
+    </TweakRow>
+  );
+}
+
+Object.assign(window, { useTweaks, TweaksPanel, TweakSection, TweakText, TweakSelect });
+</script>
+
+<script type="text/babel">
+
+/* ─────────────────────────────────────────
+   DESIGN TOKENS — museum-web minimalism
+   bold sans-serif, b&w primary, lowercase voice,
+   pill CTAs, thin rules, restrained emoji accents
+───────────────────────────────────────── */
+const T = {
+  paper:        '#ffffff',
+  paperDim:     '#f5f3ee',
+  paperDeep:    '#ebe8e1',
+  ink:          '#0a0a0a',
+  inkSoft:      '#2c2c2c',
+  inkMid:       '#6b6b6b',
+  inkFaint:     '#a8a6a0',
+  rule:         '#dad7d0',
+
+  /* Single bright accent — used sparingly */
+  highlight:    '#ffe14d',  /* sticky-note yellow */
+  highlightDeep:'#ffd000',
+};
+
+const SANS = "'Manrope', sans-serif";
+const SERIF = "'Source Serif 4', Georgia, serif";
+const MONO = "'Roboto Mono', monospace";
+
+/* ─────────────────────────────────────────
+   SHARED UTILITIES
+───────────────────────────────────────── */
+const useScaleToFit = (w, h) => {
+  const [scale, setScale] = React.useState(1);
+  React.useEffect(() => {
+    const calc = () => {
+      const sw = window.innerWidth / (w + 60);
+      const sh = window.innerHeight / (h + 60);
+      setScale(Math.min(sw, sh, 1));
+    };
+    calc();
+    window.addEventListener('resize', calc);
+    return () => window.removeEventListener('resize', calc);
+  }, [w, h]);
+  return scale;
+};
+
+/* Wordmark — bold black "sam" lockup (original — not SAM's logo) */
+function Wordmark({ size = 26, color = T.ink }) {
+  return (
+    <div style={{
+      fontFamily: SANS, fontWeight: 800, fontSize: size,
+      letterSpacing: '-0.04em', color, lineHeight: 1,
+      display: 'inline-flex', alignItems: 'baseline', gap: 6,
+    }}>
+      <span>sam</span>
+      <span style={{
+        width: 6, height: 6, background: color, borderRadius: '50%',
+        display: 'inline-block', alignSelf: 'center', marginBottom: 2,
+      }}/>
+    </div>
+  );
+}
+
+/* Eyebrow label — tiny lowercase tracked */
+function Eyebrow({ children, color, style = {} }) {
+  return (
+    <div style={{
+      fontFamily: SANS, fontWeight: 600, fontSize: 11,
+      letterSpacing: '0.04em', textTransform: 'lowercase',
+      color: color || T.inkMid, ...style,
+    }}>{children}</div>
+  );
+}
+
+/* Pill CTA — black bg, white text, with optional emoji prefix */
+function PillButton({ onClick, disabled, children, emoji, variant = 'solid', style = {} }) {
+  const base = {
+    fontFamily: SANS, fontWeight: 600, fontSize: 15,
+    letterSpacing: '-0.005em',
+    padding: '20px 28px',
+    borderRadius: 999,
+    border: variant === 'outline' ? `1.5px solid ${T.ink}` : 'none',
+    background: variant === 'outline' ? 'transparent' : T.ink,
+    color: variant === 'outline' ? T.ink : T.paper,
+    cursor: disabled ? 'not-allowed' : 'pointer',
+    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+    transition: 'transform 0.15s ease, background 0.15s ease',
+    opacity: disabled ? 0.35 : 1,
+    width: '100%',
+    ...style,
+  };
+  return (
+    <button onClick={onClick} disabled={disabled} style={base}
+      onMouseEnter={e => { if (!disabled) e.currentTarget.style.transform = 'translateY(-1px)'; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; }}
+    >
+      {emoji && <span style={{ fontSize: 16 }}>{emoji}</span>}
+      <span>{children}</span>
+    </button>
+  );
+}
+
+/* Thin rule */
+function Rule({ my = 24, color }) {
+  return <div style={{ height: 1, background: color || T.rule, marginTop: my, marginBottom: my, width: '100%' }} />;
+}
+
+/* ─────────────────────────────────────────
+   SCREEN 1: IDLE / LABEL
+   Museum placard aesthetic — clean white card,
+   left-aligned, no decorative UI chrome
+───────────────────────────────────────── */
+function IdleScreen({ onTap, tweaks }) {
+  const [popped, setPopped] = React.useState(false);
+  const [wobble, setWobble] = React.useState(false);
+
+  /* Pop in after a short delay so it feels like it sneaks up */
+  React.useEffect(() => {
+    const t1 = setTimeout(() => setPopped(true), 900);
+    return () => clearTimeout(t1);
+  }, []);
+
+  /* Periodic wiggle to keep drawing attention */
+  React.useEffect(() => {
+    if (!popped) return;
+    const loop = setInterval(() => {
+      setWobble(true);
+      setTimeout(() => setWobble(false), 600);
+    }, 3000);
+    return () => clearInterval(loop);
+  }, [popped]);
+
+  return (
+    <>
+      <style>{`
+        @keyframes popUp {
+          0%   { transform: translateY(120%) scale(0.85); opacity: 0; }
+          60%  { transform: translateY(-8%) scale(1.04); opacity: 1; }
+          80%  { transform: translateY(4%) scale(0.98); }
+          100% { transform: translateY(0%) scale(1); opacity: 1; }
+        }
+        @keyframes idleWobble {
+          0%,100% { transform: rotate(0deg) scale(1); }
+          20%     { transform: rotate(-6deg) scale(1.06); }
+          40%     { transform: rotate(5deg) scale(1.06); }
+          60%     { transform: rotate(-3deg) scale(1.03); }
+          80%     { transform: rotate(2deg) scale(1.01); }
+        }
+        @keyframes ripple {
+          0%   { transform: scale(1); opacity: 0.55; }
+          100% { transform: scale(2.6); opacity: 0; }
+        }
+        @keyframes float {
+          0%,100% { transform: translateY(0px); }
+          50%     { transform: translateY(-6px); }
+        }
+      `}</style>
+
+      <div
+        onClick={onTap}
+        style={{
+          width:'100%', height:'100%',
+          background: '#000000',
+          display:'flex', flexDirection:'column',
+          color: T.ink, position:'relative',
+          cursor: 'pointer',
+        }}
+      >
+        {/* Label card */}
+        <div style={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '60px 72px',
+        }}>
+          <div style={{ width: '100%', maxWidth: 580 }}>
+
+            <div style={{
+              fontFamily: SANS, fontWeight: 700, fontSize: 28,
+              color: T.ink, letterSpacing: '-0.01em',
+              lineHeight: 1.2, marginBottom: 4,
+            }}>
+              {tweaks.artistLabel}
+            </div>
+
+            <div style={{
+              fontFamily: SERIF, fontStyle: 'italic', fontWeight: 400,
+              fontSize: 26, color: T.ink, lineHeight: 1.25, marginBottom: 28,
+            }}>
+              Women of the Floating World
+            </div>
+
+            <div style={{
+              fontFamily: SANS, fontSize: 16, fontWeight: 400,
+              color: T.inkSoft, lineHeight: 1.5, marginBottom: 4,
+            }}>
+              c. 1820–1840, ink and color on silk, 14 × 19"
+            </div>
+
+            <div style={{
+              fontFamily: SANS, fontSize: 16, fontWeight: 400,
+              color: T.inkSoft, lineHeight: 1.5, marginBottom: 28,
+            }}>
+              Seattle Art Museum — Gift of the Founders Society
+            </div>
+
+            <p style={{
+              fontFamily: SANS, fontSize: 15, fontWeight: 400,
+              color: T.inkMid, lineHeight: 1.65, margin: 0,
+            }}>
+              {tweaks.artistLabel} was a Japanese painter active during the late Edo period,
+              known for intimate scenes of women in domestic and social settings. Working in
+              the tradition of bijinga, or "pictures of beautiful women," her compositions
+              explore power, observation, and the unspoken — who leads, who watches, and
+              what is left unsaid.
+            </p>
+          </div>
+        </div>
+
+        {/* Callout pill — separate from the circle so it never overlaps */}
+        <div style={{
+          position: 'absolute',
+          bottom: 88,
+          right: 36,
+          background: T.ink,
+          color: T.paper,
+          fontFamily: SANS, fontWeight: 700, fontSize: 12,
+          padding: '8px 14px',
+          borderRadius: 999,
+          whiteSpace: 'nowrap',
+          letterSpacing: '-0.01em',
+          opacity: popped ? 1 : 0,
+          animation: popped ? 'float 3s ease-in-out infinite' : 'none',
+          transition: 'opacity 0.3s ease',
+        }}>
+          tap here ✨
+          {/* Triangle pointing down-right toward circle */}
+          <div style={{
+            position: 'absolute',
+            bottom: -7, right: 20,
+            width: 0, height: 0,
+            borderLeft: '6px solid transparent',
+            borderRight: '6px solid transparent',
+            borderTop: `7px solid ${T.ink}`,
+          }}/>
+        </div>
+
+        {/* Circle — only 1/4 peeks from extreme corner */}
+        <div style={{
+          position: 'absolute',
+          bottom: -72,
+          right: -72,
+          width: 144,
+          height: 144,
+          animation: popped
+            ? (wobble ? 'idleWobble 0.6s ease' : undefined)
+            : 'popUp 0.7s cubic-bezier(0.34,1.56,0.64,1) forwards',
+          opacity: popped ? 1 : 0,
+          transformOrigin: 'bottom right',
+        }}>
+          {[0, 1, 2].map(i => (
+            <div key={i} style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: '50%',
+              border: `2.5px solid ${T.highlight}`,
+              animation: `ripple 2s ease-out ${i * 0.65}s infinite`,
+            }}/>
+          ))}
+          <div style={{
+            position: 'absolute', inset: 0,
+            borderRadius: '50%',
+            background: T.highlight,
+            display: 'flex',
+            alignItems: 'flex-start',
+            justifyContent: 'flex-start',
+            paddingTop: 22,
+            paddingLeft: 22,
+            boxShadow: `-4px -4px 32px rgba(255,225,77,0.45), -2px -2px 10px rgba(0,0,0,0.10)`,
+          }}>
+            <span style={{ fontSize: 32, lineHeight: 1 }}>📲</span>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ─────────────────────────────────────────
+   SCREEN 2: UNLOCK
+───────────────────────────────────────── */
+const TEAM_NAMES = [
+  'the observers', 'the storytellers', 'the witnesses',
+  'the interpreters', 'the wanderers', 'the dreamers',
+];
+
+function UnlockScreen({ teamName, onComplete }) {
+  const [phase, setPhase] = React.useState(0);
+
+  React.useEffect(() => {
+    const t1 = setTimeout(() => setPhase(1), 500);
+    const t2 = setTimeout(() => setPhase(2), 1900);
+    const t3 = setTimeout(() => onComplete(), 2700);
+    return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); };
+  }, []);
+
+  return (
+    <div style={{
+      width:'100%', height:'100%',
+      background: T.ink,
+      display:'flex', flexDirection:'column',
+      alignItems:'center', justifyContent:'center',
+      position:'relative', overflow:'hidden',
+    }}>
+      {/* Concentric rings in highlight color */}
+      {[0,1,2,3].map(i => (
+        <div key={i} style={{
+          position:'absolute',
+          width: 80 + i*200,
+          height: 80 + i*200,
+          borderRadius:'50%',
+          border:`1.5px solid rgba(255,225,77,${0.45 - i*0.09})`,
+          animation:`ringExpand 1.3s cubic-bezier(0.22,1,0.36,1) ${i*0.1}s both`,
+        }}/>
+      ))}
+
+      {/* Wordmark center pulse */}
+      <div style={{
+        position:'absolute', top:'50%', left:'50%',
+        transform: phase >= 1 ? 'translate(-50%, calc(-50% - 80px))' : 'translate(-50%, -50%)',
+        opacity: phase < 2 ? 1 : 0,
+        transition: 'transform 0.6s cubic-bezier(0.4,0,0.2,1), opacity 0.6s ease',
+      }}>
+        <Wordmark size={28} color={T.paper}/>
+      </div>
+
+      {/* Team name reveal */}
+      <div style={{
+        textAlign:'center', zIndex:2,
+        opacity: phase >= 1 ? 1 : 0,
+        transform: phase >= 1 ? 'translateY(0)' : 'translateY(12px)',
+        transition:'opacity 0.6s ease, transform 0.6s ease',
+      }}>
+        <Eyebrow color={T.highlight} style={{ marginBottom: 18 }}>welcome back</Eyebrow>
+
+        <div style={{
+          fontFamily: SANS,
+          fontSize: 56, fontWeight: 800,
+          color: T.paper, lineHeight: 0.95,
+          letterSpacing: '-0.045em',
+        }}>
+          {teamName}
+        </div>
+
+        <div style={{
+          fontFamily: SANS, fontSize: 14, fontWeight: 500,
+          color: 'rgba(255,255,255,0.55)',
+          marginTop: 16,
+          letterSpacing: '-0.005em',
+        }}>
+          you&apos;re in the building 👋
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes ringExpand {
+          from { transform: scale(0); opacity: 0; }
+          to   { transform: scale(1); opacity: 1; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
+   SCREEN 3: MISSION 1
+───────────────────────────────────────── */
+function Mission1Screen({ teamName, onLock, tweaks }) {
+  const [story, setStory] = React.useState('');
+  const [listening, setListening] = React.useState(false);
+  const [locked, setLocked] = React.useState(false);
+  const recognitionRef = React.useRef(null);
+
+  const speechSupported = typeof window !== 'undefined' &&
+    ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window);
+
+  const toggleVoice = () => {
+    if (!speechSupported) return;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (listening) {
+      recognitionRef.current && recognitionRef.current.stop();
+      setListening(false);
+      return;
+    }
+    const rec = new SR();
+    rec.continuous = true;
+    rec.interimResults = true;
+    rec.lang = 'en-US';
+    recognitionRef.current = rec;
+    let base = story;
+    rec.onresult = (e) => {
+      let interim = '', final = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) final += t;
+        else interim += t;
+      }
+      if (final) base += (base ? ' ' : '') + final;
+      setStory(base + (interim ? (base ? ' ' : '') + interim : ''));
+    };
+    rec.onerror = () => setListening(false);
+    rec.onend = () => setListening(false);
+    rec.start();
+    setListening(true);
+  };
+
+  React.useEffect(() => () => {
+    recognitionRef.current && recognitionRef.current.stop();
+  }, []);
+
+  const handleLock = () => {
+    if (!story.trim()) return;
+    recognitionRef.current && recognitionRef.current.stop();
+    setListening(false);
+    setLocked(true);
+    setTimeout(() => onLock(story.trim()), 600);
+  };
+
+  return (
+    <div style={{
+      width:'100%', height:'100%',
+      background: T.paper,
+      display:'flex', flexDirection:'column',
+      color: T.ink, position:'relative', overflow:'hidden',
+    }}>
+
+      {/* Header */}
+      <div style={{
+        padding:'24px 40px', display:'flex',
+        justifyContent:'space-between', alignItems:'center',
+        borderBottom: `1px solid ${T.rule}`,
+      }}>
+        <Wordmark size={20}/>
+        <div style={{
+          display:'flex', alignItems:'center', gap: 8,
+          background: T.ink, color: T.paper,
+          padding: '6px 14px', borderRadius: 999,
+          fontFamily: SANS, fontWeight: 600, fontSize: 11,
+        }}>
+          <span style={{
+            width: 6, height: 6, borderRadius: '50%',
+            background: T.highlight,
+          }}/>
+          <span>{teamName}</span>
+        </div>
+      </div>
+
+      <div style={{ padding:'36px 40px 0', flex:1, display:'flex', flexDirection:'column' }}>
+
+        {/* Mission progress */}
+        <div style={{ display:'flex', alignItems:'center', gap: 10, marginBottom: 20 }}>
+          <Eyebrow>mission 1 of 2</Eyebrow>
+          <div style={{ flex:1, display:'flex', gap: 4 }}>
+            <div style={{ flex:1, height: 3, background: T.ink, borderRadius: 2 }}/>
+            <div style={{ flex:1, height: 3, background: T.rule, borderRadius: 2 }}/>
+          </div>
+        </div>
+
+        <h2 style={{
+          fontFamily: SANS,
+          fontSize: 42, fontWeight: 800, lineHeight: 0.98,
+          color: T.ink, letterSpacing: '-0.04em',
+          marginBottom: 14,
+        }}>
+          what&apos;s the<br/>drama here? 👀
+        </h2>
+
+        <p style={{
+          fontFamily: SERIF,
+          fontSize: 17, fontWeight: 400, lineHeight: 1.5,
+          color: T.inkMid, fontStyle: 'italic',
+          marginBottom: 24, maxWidth: 540,
+        }}>
+          look at the painting. talk it out as a group. then tell us your most creative story.
+        </p>
+
+        {/* Story input — sticky-note feel */}
+        <div style={{ flex:1, display:'flex', flexDirection:'column' }}>
+          <div style={{ position:'relative', flex:1, minHeight: 240 }}>
+            <textarea
+              value={story}
+              onChange={e => !locked && setStory(e.target.value)}
+              readOnly={locked}
+              placeholder="tell us your juiciest story."
+              style={{
+                width:'100%', height:'100%',
+                minHeight: 240,
+                background: T.highlight,
+                border: 'none',
+                borderRadius: 18,
+                padding: '24px 26px',
+                fontFamily: SERIF,
+                fontSize: 18, fontWeight: 400, lineHeight: 1.55,
+                color: T.ink,
+                resize:'none',
+                outline:'none',
+                boxSizing:'border-box',
+                caretColor: T.ink,
+                boxShadow: listening
+                  ? `0 0 0 3px ${T.ink}`
+                  : `0 4px 0 ${T.highlightDeep}`,
+                transition: 'box-shadow 0.2s',
+              }}
+            />
+            {listening && (
+              <div style={{
+                position:'absolute', top:18, right:18,
+                display:'flex', alignItems:'center', gap:8,
+                background: T.ink, color: T.paper,
+                padding: '6px 12px', borderRadius: 999,
+                fontFamily: SANS, fontWeight: 600, fontSize: 11,
+              }}>
+                <div style={{
+                  width: 7, height: 7, borderRadius:'50%',
+                  background: '#ff4444',
+                  animation: 'recPulse 1s ease-in-out infinite',
+                }}/>
+                listening
+              </div>
+            )}
+            {story.length > 0 && (
+              <div style={{
+                position:'absolute', bottom:14, right:18,
+                fontFamily: MONO, fontSize: 10,
+                color: 'rgba(0,0,0,0.4)',
+              }}>
+                {story.length} chars
+              </div>
+            )}
+          </div>
+
+          {/* Voice button — outline pill */}
+          <button onClick={toggleVoice} style={{
+            marginTop: 12,
+            padding: '14px 22px',
+            borderRadius: 999,
+            border: `1.5px solid ${listening ? T.ink : T.rule}`,
+            background: listening ? T.ink : T.paper,
+            color: listening ? T.paper : T.ink,
+            cursor: speechSupported ? 'pointer' : 'not-allowed',
+            opacity: speechSupported ? 1 : 0.4,
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+            fontFamily: SANS, fontWeight: 600, fontSize: 13,
+          }}>
+            <span style={{ fontSize: 14 }}>🎙️</span>
+            <span>{listening ? 'tap to stop' : (speechSupported ? 'narrate with voice' : 'voice unavailable')}</span>
+          </button>
+        </div>
+
+        {/* Lock button */}
+        <div style={{ paddingBottom: 32, paddingTop: 16 }}>
+          <PillButton
+            onClick={handleLock}
+            disabled={!story.trim() || locked}
+            emoji="🔒"
+          >
+            lock it in
+          </PillButton>
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes recPulse {
+          0%,100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
+   SCREEN 4: MISSION 2
+───────────────────────────────────────── */
+function CameraPreview({ onCapture, countdown }) {
+  const videoRef = React.useRef(null);
+  const [camError, setCamError] = React.useState(false);
+
+  React.useEffect(() => {
+    let stream;
+    navigator.mediaDevices?.getUserMedia({ video: { facingMode: 'user' }, audio: false })
+      .then(s => {
+        stream = s;
+        if (videoRef.current) {
+          videoRef.current.srcObject = s;
+          videoRef.current.play();
+        }
+      })
+      .catch(() => setCamError(true));
+    return () => stream?.getTracks().forEach(t => t.stop());
+  }, []);
+
+  if (camError) {
+    return (
+      <div style={{
+        flex: 1, borderRadius: 20, overflow: 'hidden',
+        background: T.ink,
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center', gap: 12,
+      }}>
+        <span style={{ fontSize: 36 }}>📷</span>
+        <div style={{
+          fontFamily: SANS, fontSize: 13, fontWeight: 500,
+          color: 'rgba(255,255,255,0.5)', textAlign: 'center', maxWidth: 240,
+        }}>
+          camera access needed — allow it in your browser settings
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      flex: 1, borderRadius: 20, overflow: 'hidden',
+      position: 'relative', background: '#000',
+    }}>
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        style={{
+          width: '100%', height: '100%',
+          objectFit: 'cover',
+          transform: 'scaleX(-1)',
+        }}
+      />
+      {/* Live badge — hidden during countdown */}
+      {!countdown && (
+        <div style={{
+          position: 'absolute', top: 14, left: 14,
+          background: 'rgba(0,0,0,0.55)',
+          backdropFilter: 'blur(8px)',
+          color: T.paper,
+          padding: '5px 12px', borderRadius: 999,
+          fontFamily: MONO, fontSize: 10,
+          display: 'flex', alignItems: 'center', gap: 7,
+        }}>
+          <span style={{
+            width: 7, height: 7, borderRadius: '50%',
+            background: '#ff3b30',
+            animation: 'recPulse 1s ease-in-out infinite',
+          }}/>
+          live
+        </div>
+      )}
+
+      {/* Countdown overlaid on camera */}
+      {countdown !== null && countdown > 0 && (
+        <div style={{
+          position: 'absolute', inset: 0,
+          background: 'rgba(0,0,0,0.55)',
+          backdropFilter: 'blur(4px)',
+          display: 'flex', flexDirection: 'column',
+          alignItems: 'center', justifyContent: 'center', gap: 12,
+        }}>
+          <div style={{
+            fontFamily: SANS, fontWeight: 600, fontSize: 13,
+            color: T.highlight, letterSpacing: '0.06em', textTransform: 'lowercase',
+          }}>
+            smile! 📸
+          </div>
+          <div style={{
+            fontFamily: SANS, fontSize: 140, fontWeight: 800,
+            color: T.paper, lineHeight: 1,
+            letterSpacing: '-0.05em',
+            animation: 'countPulse 0.9s ease-in-out',
+          }}>
+            {countdown}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Mission2Screen({ teamName, onCapture, tweaks }) {
+  const [countdown, setCountdown] = React.useState(null);
+
+  const startCountdown = () => setCountdown(10);
+
+  React.useEffect(() => {
+    if (countdown === null) return;
+    if (countdown === 0) { setTimeout(() => onCapture(), 400); return; }
+    const t = setTimeout(() => setCountdown(c => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [countdown]);
+
+  return (
+    <div style={{
+      width:'100%', height:'100%',
+      background: T.paper,
+      display:'flex', flexDirection:'column',
+      color: T.ink, position:'relative', overflow:'hidden',
+    }}>
+
+      <style>{`@keyframes countPulse {
+        0%   { transform: scale(1.5); opacity: 0; }
+        40%  { transform: scale(1.0); opacity: 1; }
+        100% { transform: scale(0.8); opacity: 0.2; }
+      }`}</style>
+
+      {/* Header */}
+      <div style={{
+        padding:'24px 40px', display:'flex',
+        justifyContent:'space-between', alignItems:'center',
+        borderBottom: `1px solid ${T.rule}`,
+      }}>
+        <Wordmark size={20}/>
+        <div style={{
+          display:'flex', alignItems:'center', gap: 8,
+          background: T.ink, color: T.paper,
+          padding: '6px 14px', borderRadius: 999,
+          fontFamily: SANS, fontWeight: 600, fontSize: 11,
+        }}>
+          <span style={{ width: 6, height: 6, borderRadius: '50%', background: T.highlight }}/>
+          <span>{teamName}</span>
+        </div>
+      </div>
+
+      <div style={{ padding:'28px 40px 0', flex:1, display:'flex', flexDirection:'column' }}>
+
+        <div style={{ display:'flex', alignItems:'center', gap: 10, marginBottom: 16 }}>
+          <Eyebrow>mission 2 of 2</Eyebrow>
+          <div style={{ flex:1, display:'flex', gap: 4 }}>
+            <div style={{ flex:1, height: 3, background: T.ink, borderRadius: 2 }}/>
+            <div style={{ flex:1, height: 3, background: T.ink, borderRadius: 2 }}/>
+          </div>
+        </div>
+
+        <h2 style={{
+          fontFamily: SANS, fontSize: 38, fontWeight: 800, lineHeight: 0.98,
+          color: T.ink, letterSpacing: '-0.04em', marginBottom: 10,
+        }}>
+          become the<br/>painting 🎭
+        </h2>
+
+        <p style={{
+          fontFamily: SERIF, fontSize: 16, fontWeight: 400, lineHeight: 1.5,
+          color: T.inkMid, fontStyle: 'italic', marginBottom: 16, maxWidth: 540,
+        }}>
+          step back from the screen. strike your pose — then hit ready.
+        </p>
+
+        {/* Camera preview */}
+        <CameraPreview onCapture={onCapture} countdown={countdown} />
+
+        {/* Ready CTA */}
+        <div style={{ paddingBottom: 28, paddingTop: 16 }}>
+          <PillButton onClick={startCountdown} disabled={countdown !== null} emoji="⏱️">
+            start the timer
+          </PillButton>
+          <div style={{
+            textAlign:'center', marginTop: 10,
+            fontFamily: SANS, fontSize: 11, fontWeight: 500, color: T.inkFaint,
+          }}>
+            10-second countdown · step back from the screen
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
+   SCREEN 5: COMPLETION
+───────────────────────────────────────── */
+function CompletionScreen({ teamName, chosenPrompts, onReset, tweaks }) {
+  const [fadeIn, setFadeIn] = React.useState(false);
+  React.useEffect(() => { setTimeout(() => setFadeIn(true), 100); }, []);
+  const storyText = typeof chosenPrompts === 'string' ? chosenPrompts : '';
+
+  return (
+    <div style={{
+      width:'100%', height:'100%',
+      background: T.paper,
+      display:'flex', flexDirection:'column',
+      color: T.ink, position:'relative', overflow:'hidden',
+      opacity: fadeIn ? 1 : 0,
+      transition:'opacity 0.6s ease',
+    }}>
+
+      {/* Header */}
+      <div style={{
+        padding:'24px 40px', display:'flex',
+        justifyContent:'space-between', alignItems:'center',
+        borderBottom: `1px solid ${T.rule}`,
+      }}>
+        <Wordmark size={20}/>
+        <div style={{
+          display:'flex', alignItems:'center', gap: 8,
+          background: T.highlight, color: T.ink,
+          padding: '6px 14px', borderRadius: 999,
+          fontFamily: SANS, fontWeight: 700, fontSize: 11,
+        }}>
+          <span>✓</span>
+          <span>complete</span>
+        </div>
+      </div>
+
+      <div style={{ padding:'36px 40px 0', flex:1, display:'flex', flexDirection:'column' }}>
+
+        <Eyebrow style={{ marginBottom: 18 }}>challenge complete</Eyebrow>
+
+        <h1 style={{
+          fontFamily: SANS,
+          fontSize: 44, fontWeight: 800, lineHeight: 0.98,
+          color: T.ink, letterSpacing: '-0.04em',
+          marginBottom: 8,
+        }}>
+          not bad,<br/>{teamName} 🎉
+        </h1>
+
+        <div style={{
+          fontFamily: SERIF, fontSize: 16, fontWeight: 400,
+          fontStyle: 'italic', color: T.inkMid,
+          marginBottom: 28,
+        }}>
+          your take is officially on record.
+        </div>
+
+        {/* Group photo placeholder */}
+        <div style={{
+          height: 200,
+          background: T.ink,
+          backgroundImage: `repeating-linear-gradient(135deg, transparent, transparent 12px, rgba(255,255,255,0.04) 12px, rgba(255,255,255,0.04) 24px)`,
+          borderRadius: 16,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          position:'relative',
+          marginBottom: 20,
+        }}>
+          <div style={{ textAlign:'center', color: 'rgba(255,255,255,0.5)' }}>
+            <div style={{ fontSize: 28, marginBottom: 6 }}>📷</div>
+            <div style={{ fontFamily: MONO, fontSize: 10, letterSpacing:'0.04em' }}>
+              group_photo.jpg
+            </div>
+          </div>
+          <div style={{
+            position:'absolute', top: 12, left: 12,
+            background: T.paper, color: T.ink,
+            padding: '4px 10px', borderRadius: 999,
+            fontFamily: MONO, fontSize: 9,
+            display: 'flex', alignItems: 'center', gap: 6,
+          }}>
+            <span style={{
+              width: 6, height: 6, borderRadius: '50%',
+              background: '#ff4444',
+            }}/>
+            captured
+          </div>
+          <div style={{
+            position:'absolute', bottom: 12, right: 14,
+            fontFamily: MONO, fontSize: 9,
+            color: 'rgba(255,255,255,0.4)',
+          }}>
+            {new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}
+          </div>
+        </div>
+
+        {/* Their interpretation */}
+        <div style={{ marginBottom: 24 }}>
+          <Eyebrow style={{ marginBottom: 10 }}>your interpretation</Eyebrow>
+          {storyText ? (
+            <div style={{
+              padding: '20px 22px',
+              background: T.highlight,
+              borderRadius: 14,
+              boxShadow: `0 4px 0 ${T.highlightDeep}`,
+            }}>
+              <p style={{
+                fontFamily: SERIF,
+                fontSize: 16, fontWeight: 400, lineHeight: 1.55,
+                color: T.ink,
+                fontStyle: 'italic',
+              }}>
+                "{storyText}"
+              </p>
+            </div>
+          ) : (
+            <div style={{ fontFamily: SANS, fontSize: 13, color: T.inkFaint }}>
+              (no story recorded)
+            </div>
+          )}
+        </div>
+
+        {/* Actions */}
+        <div style={{
+          marginTop:'auto', paddingBottom: 32,
+          display:'flex', flexDirection:'column', gap: 10,
+        }}>
+          <PillButton emoji="👀" variant="outline">
+            compare with other teams
+          </PillButton>
+          <PillButton onClick={onReset} emoji="↺">
+            return to label
+          </PillButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────
+   MAIN APP
+───────────────────────────────────────── */
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "darkMode": false,
+  "artistLabel": "katsushika ōi, attributed",
+  "teamPrefix": "the"
+}/*EDITMODE-END*/;
+
+function App() {
+  const [tweaks, setTweak] = window.useTweaks(TWEAK_DEFAULTS);
+  const [screen, setScreen] = React.useState('idle');
+  const [teamName, setTeamName] = React.useState('');
+  const [chosenPrompts, setChosenPrompts] = React.useState('');
+
+  const scale = useScaleToFit(768, 1024);
+
+  const handleTap = () => {
+    const name = TEAM_NAMES[Math.floor(Math.random() * TEAM_NAMES.length)];
+    setTeamName(name);
+    setScreen('unlock');
+  };
+  const handleUnlockDone = () => setScreen('mission1');
+  const handleLockStory = (story) => { setChosenPrompts(story); setScreen('mission2'); };
+  const handleCapture = () => setScreen('completion');
+  const handleReset = () => { setTeamName(''); setChosenPrompts(''); setScreen('idle'); };
+
+  const renderScreen = () => {
+    switch (screen) {
+      case 'idle':       return <IdleScreen onTap={handleTap} tweaks={tweaks} />;
+      case 'unlock':     return <UnlockScreen teamName={teamName} onComplete={handleUnlockDone} />;
+      case 'mission1':   return <Mission1Screen teamName={teamName} onLock={handleLockStory} tweaks={tweaks} />;
+      case 'mission2':   return <Mission2Screen teamName={teamName} onCapture={handleCapture} tweaks={tweaks} />;
+      case 'completion': return <CompletionScreen teamName={teamName} chosenPrompts={chosenPrompts} onReset={handleReset} tweaks={tweaks} />;
+      default: return null;
+    }
+  };
+
+  return (
+    <>
+      <div style={{
+        transform: `scale(${scale})`,
+        transformOrigin: 'center center',
+        transition: 'transform 0.2s ease',
+      }}>
+        <div className="tablet-shell" data-screen-label={`Tablet — ${screen}`}>
+          {/* Status pill */}
+          <div style={{
+            position:'absolute', top:14, left:0, right:0,
+            display:'flex', justifyContent:'center',
+            zIndex:100, pointerEvents:'none',
+          }}>
+            <div style={{
+              width:100, height:5,
+              background:'rgba(255,255,255,0.15)',
+              borderRadius:10,
+            }}/>
+          </div>
+
+          <div className="tablet-screen">
+            <div style={{ position:'absolute', inset:0 }}>
+              {renderScreen()}
+            </div>
+          </div>
+        </div>
+
+        <div style={{
+          textAlign:'center', marginTop: 18,
+          fontFamily: MONO, fontSize: 10, letterSpacing:'0.04em',
+          color: 'rgba(0,0,0,0.3)',
+        }}>
+          sam · breadcrumbs · interactive tablet prototype
+        </div>
+      </div>
+
+      <window.TweaksPanel>
+        <window.TweakSection label="content" />
+        <window.TweakText
+          label="artist label"
+          value={tweaks.artistLabel}
+          onChange={v => setTweak('artistLabel', v)}
+        />
+        <window.TweakSection label="screens" />
+        <window.TweakSelect
+          label="jump to screen"
+          options={['idle','unlock','mission 1','mission 2','complete']}
+          value={['idle','unlock','mission 1','mission 2','complete'][['idle','unlock','mission1','mission2','completion'].indexOf(screen)] || 'idle'}
+          onChange={v => {
+            const map = {'idle':'idle','unlock':'unlock','mission 1':'mission1','mission 2':'mission2','complete':'completion'};
+            if (v !== 'idle' && !teamName) setTeamName(TEAM_NAMES[0]);
+            setScreen(map[v]);
+          }}
+        />
+      </window.TweaksPanel>
+    </>
+  );
+}
+
+const root = ReactDOM.createRoot(document.getElementById('root'));
+root.render(<App />);
+</script>
+</body>
+</html>
